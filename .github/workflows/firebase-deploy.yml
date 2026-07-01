@@ -18,50 +18,80 @@ jobs:
         node-version: [18.x]
 
     steps:
-      - name: Checkout code
+      # Step 1: Checkout the code
+      - name: 📥 Checkout code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Setup Node.js ${{ matrix.node-version }}
+      # Step 2: Setup Node.js
+      - name: 🔧 Setup Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
           cache: 'npm'
 
-      - name: Install dependencies
-        run: npm ci
+      # Step 3: Install Dependencies
+      - name: 📦 Install Dependencies
+        run: |
+          echo "🔄 Installing npm dependencies..."
+          npm ci
+          echo "✅ Dependencies installed successfully"
         env:
           CI: true
 
-      - name: Lint code
-        run: npm run lint --if-present
+      # Step 4: Lint code
+      - name: 🔍 Lint code
+        run: |
+          echo "🔍 Running ESLint..."
+          npm run lint --if-present
+          echo "✅ Linting completed"
         continue-on-error: true
 
-      - name: Type check
-        run: npm run type-check --if-present
+      # Step 5: Type check
+      - name: 📝 Type check
+        run: |
+          echo "📝 Running TypeScript type check..."
+          npm run type-check --if-present
+          echo "✅ Type check completed"
         continue-on-error: true
 
-      - name: Run tests
-        run: npm run test --if-present
+      # Step 6: Run tests
+      - name: 🧪 Run tests
+        run: |
+          echo "🧪 Running test suite..."
+          npm run test --if-present
+          echo "✅ Tests completed"
         continue-on-error: true
 
-      - name: Build for production
-        run: npm run build
+      # Step 7: Build the Application
+      - name: 🏗️ Build the Application
+        run: |
+          echo "🏗️ Building production bundle..."
+          npm run build
+          echo "✅ Build completed successfully"
         env:
           CI: true
           NODE_ENV: production
 
-      - name: Check build output
+      # Step 8: Verify build output
+      - name: ✔️ Check build output
         run: |
+          echo "📂 Verifying dist folder..."
           if [ ! -d "dist" ]; then
             echo "❌ Build failed: dist folder not created"
             exit 1
           fi
-          echo "✅ Build successful"
-          ls -la dist/ | head -20
+          echo "✅ Build successful - dist folder exists"
+          echo ""
+          echo "📊 Build artifacts:"
+          ls -lah dist/ | head -20
+          echo ""
+          echo "📁 Total dist size:"
+          du -sh dist/
 
-      - name: Deploy to Firebase Hosting (PR Preview)
+      # Step 9: Deploy to Firebase Hosting (PR Preview)
+      - name: 🚀 Deploy to Firebase Hosting (PR Preview)
         if: github.event_name == 'pull_request'
         uses: FirebaseExtended/action-hosting-deploy@v0
         with:
@@ -72,7 +102,8 @@ jobs:
         env:
           FIREBASE_CLI_EXPERIMENTS: webframeworks
 
-      - name: Deploy to Firebase Hosting (Production)
+      # Step 10: Deploy to Firebase Hosting (Production)
+      - name: 🌐 Deploy to Firebase Hosting (Production)
         if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
         uses: FirebaseExtended/action-hosting-deploy@v0
         with:
@@ -83,12 +114,50 @@ jobs:
         env:
           FIREBASE_CLI_EXPERIMENTS: webframeworks
 
-      - name: Post deployment summary
+      # Step 11: Post deployment summary
+      - name: 📋 Post deployment summary
         if: always()
         run: |
-          echo "## Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "## 🚀 Deployment Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "- **Event**: ${{ github.event_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "### Deployment Details" >> $GITHUB_STEP_SUMMARY
+          echo "- **Event Type**: ${{ github.event_name }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Branch**: ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Commit**: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Status**: ${{ job.status }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Commit SHA**: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Commit Message**: ${{ github.event.head_commit.message }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Author**: ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Job Status**: ${{ job.status }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Deployment URLs" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "- **Preview URL**: https://json-compare-platform-abc123.web.app" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "- **Production URL**: https://json-compare-platform-abc123.web.app" >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Workflow Execution Time" >> $GITHUB_STEP_SUMMARY
+          echo "- Started: ${{ job.start_time }}" >> $GITHUB_STEP_SUMMARY
+
+      # Step 12: Notify on Success
+      - name: ✨ Success notification
+        if: success()
+        run: |
+          echo "✅ ✅ ✅ DEPLOYMENT SUCCESSFUL ✅ ✅ ✅"
+          echo ""
+          echo "🎉 Your app has been deployed to Firebase Hosting!"
+          echo ""
+          echo "📱 View your live site:"
+          echo "   https://json-compare-platform-abc123.web.app"
+          echo ""
+          echo "📊 View logs:"
+          echo "   https://console.firebase.google.com/project/json-compare-platform-abc123/hosting"
+
+      # Step 13: Notify on Failure
+      - name: ⚠️ Failure notification
+        if: failure()
+        run: |
+          echo "❌ ❌ ❌ DEPLOYMENT FAILED ❌ ❌ ❌"
+          echo ""
+          echo "Check the logs above for errors"
+          echo ""
+          exit 1
